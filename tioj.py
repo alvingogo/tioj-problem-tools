@@ -3,6 +3,7 @@ import json
 import os
 from dynaconf import Dynaconf
 from pathlib import Path
+from typing import Optional
 
 import src.helper as helper
 from src.session import open_session
@@ -42,41 +43,83 @@ def create_empty_problem(number: int = typer.Argument(1, help='The number of cre
     for _ in range(number):
         problem_handler.create_empty_problem(tioj, settings)
 
+'''
+Requirement: None.
+
+Description: Resolve the tri-state --update-*/--no-update-* switches of upload_problem, where
+             None means the switch was not given on the command line.
+             - none of them given: every part is updated;
+             - only --update-* given: only the mentioned parts are updated;
+             - only --no-update-* given: every part but the mentioned ones is updated;
+             - both styles given: an error, since the intent is ambiguous.
+
+Return value: A dict mapping every option name to whether that part should be updated.
+'''
+def resolve_update_options(options):
+    selected = [name for name, value in options.items() if value is True]
+    excluded = [name for name, value in options.items() if value is False]
+
+    if selected and excluded:
+        helper.throw_error('Cannot mix ' +
+                           ', '.join(f'--update-{name.replace("_", "-")}' for name in selected) +
+                           ' with ' +
+                           ', '.join(f'--no-update-{name.replace("_", "-")}' for name in excluded) +
+                           '. Use only one of the two styles.')
+
+    if selected:
+        return {name: name in selected for name in options}
+    if excluded:
+        return {name: name not in excluded for name in options}
+    return {name: True for name in options}
+
 @app.command()
 def upload_problem(tps_dir: Path = typer.Argument(..., exists=True, file_okay=False, help='Path to the tps directory.'),
                    problem_id: str = typer.Argument('', help="The corresponding TIOJ problem id. Leave blank if you want to use 'tioj_problem_id' in problem.json; Use 'new' to upload the problem to a new empty problem."),
-                   update_metadata: bool = typer.Option(True, help="Whether you want to update the metadata in problem.json and the statements."),
-                   update_sample: bool = typer.Option(True, help="Whether you want to update the sample testcases."),
-                   update_checker: bool = typer.Option(True, help="Whether you want to update the checker."),
-                   update_grader: bool = typer.Option(True, help="Whether you want to update the header and grader."),
-                   update_testdata: bool = typer.Option(True, help="Whether you want to update the testcases. --no-update-testdata will give an effective speed up when you don't want to update testcases."),
-                   update_subtasks_data: bool = typer.Option(True, help="Whether you want to update the subtasks' data.")):
+                   update_metadata: Optional[bool] = typer.Option(None, help="Update the metadata in problem.json and the statements."),
+                   update_sample: Optional[bool] = typer.Option(None, help="Update the sample testcases."),
+                   update_checker: Optional[bool] = typer.Option(None, help="Update the checker."),
+                   update_grader: Optional[bool] = typer.Option(None, help="Update the header and grader."),
+                   update_testdata: Optional[bool] = typer.Option(None, help="Update the testcases. --no-update-testdata will give an effective speed up when you don't want to update testcases."),
+                   update_subtasks_data: Optional[bool] = typer.Option(None, help="Update the subtasks' data.")):
     '''
     Upload a problem directory in tps format to TIOJ. Need admin permission.
+
+    Every part is uploaded by default. Passing --update-* uploads only the mentioned parts,
+    while passing --no-update-* uploads everything but the mentioned parts. Mixing the two
+    styles is an error.
     '''
+    update = resolve_update_options({
+        'metadata': update_metadata,
+        'sample': update_sample,
+        'checker': update_checker,
+        'grader': update_grader,
+        'testdata': update_testdata,
+        'subtasks_data': update_subtasks_data,
+    })
+
     tioj = open_session(require_admin=True)
 
     helper.throw_status(f'Uploading problem {problem_id} to TIOJ with {tps_dir}...')
     problem, problem_id = problem_handler.init_problem(tps_dir, problem_id, tioj, settings)
     
-    if update_metadata:
+    if update['metadata']:
         problem_handler.edit_problem(problem, problem_id, tioj, settings)
 
-    if update_sample:
+    if update['sample']:
         problem_handler.upload_sample(problem, problem_id, tioj, settings)
 
-    if update_checker and problem.metadata['specjudge_type'] != 'none':
+    if update['checker'] and problem.metadata['specjudge_type'] != 'none':
         helper.throw_status(f"Detected sepcjudge_type: {problem.metadata['specjudge_type']}.")
         problem_handler.upload_checker(problem, problem_id, tioj, settings)
 
-    if update_grader and problem.metadata['interlib_type'] != 'none':
+    if update['grader'] and problem.metadata['interlib_type'] != 'none':
         helper.throw_status(f"Detected interlib_type: {problem.metadata['interlib_type']}.")
         problem_handler.upload_grader(problem, problem_id, tioj, settings)
 
-    if update_testdata:
+    if update['testdata']:
         problem_handler.upload_testdata(problem, problem_id, tioj, settings)
     
-    if update_subtasks_data:
+    if update['subtasks_data']:
         problem_handler.upload_subtasks_data(problem, problem_id, tioj, settings)
 
     helper.throw_info(f"Completed upload problem [bold]{problem.metadata['code']}[/bold] to TIOJ problem {problem_id}.")
