@@ -43,6 +43,12 @@ With the help of [Typer](https://typer.tiangolo.com/) and [Rich](https://rich.re
 
 tioj-problem-tools use the [python implementation](https://python-jsonschema.readthedocs.io/en/stable/) of [JSON schema](https://json-schema.org/understanding-json-schema/index.html) to set up proper verificatifor the json files in tps directories. Users can also modify the schema to fit their requirements.
 
+### Reset a problem without losing its number
+
+Deleting a problem on TIOJ frees its number for reuse by an unrelated problem. `delete-problem`
+instead strips a problem back to the state of a freshly created empty one, so a retired number
+stays yours and can be filled in again later by `upload-problem`.
+
 ### Neat config files
 
 tioj-problem-tools provide [toml](https://toml.io/en/) configuration files to read configurations of itself in the directory `configs/`. Whenever users want to customize their formats, users can always, and only need to, modify the content in `configs/` (including the JSON schema) except changing the attributes' names.
