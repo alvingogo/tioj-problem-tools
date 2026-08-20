@@ -10,11 +10,15 @@ def statement_filter(content, problem_id, problem, path):
     content = content.replace(problem.metadata['code'] + '.h', 'lib%04d.h' % int(problem_id))
     return content
 
-# Detect a statement file's existence and then add it into the form's data if it exists.
+# Add a statement file into the form's data. A missing file is uploaded as an empty string, so
+# that the tps directory always overwrites TIOJ instead of leaving a stale field behind.
 def add_statement(data, name, path, found_msg, problem_id, problem):
     if isfile(path):
         helper.throw_status(found_msg)
         data[name] = statement_filter(helper.read_file(path), problem_id, problem, path)
+    else:
+        helper.throw_warning(f'Cannot find {path}, clearing the corresponding field on TIOJ.')
+        data[name] = ''
 
 '''
 Requirement: Admin permission.
