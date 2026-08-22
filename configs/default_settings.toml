@@ -1,7 +1,7 @@
 [default]
 tioj_url = "tioj_url"
 tioj_username = "username" # leave blank if you don't want to fix it
-tioj_password = "password" # leave blank if you don't want to fix it
+tioj_password = "" # leave blank if you don't want to fix it; prefer "tioj.py profile" over editing this file
 metadata_schema = "{CONFIGS_DIR}/metadata.schema"
 solutions_schema = "{CONFIGS_DIR}/solutions.schema"
 subtasks_schema = "{CONFIGS_DIR}/subtasks.schema"
