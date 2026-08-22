@@ -33,7 +33,7 @@ def upload_subtasks_data(problem, problem_id, tioj, settings):
                     lists += data_idmap[test]
                 else:
                     helper.throw_warning(f'Cannot find testcase {test} on TIOJ problem {problem_id}.')
-        data[settings.tioj_instance.subtasks_data_td_list % index] = ','.join(lists)
+        data[settings.tioj_instance.subtasks_data_td_list % index] = helper.compress_id_list(lists)
         data[settings.tioj_instance.subtasks_data_constraints % index] = constraints
         data[settings.tioj_instance.subtasks_data_score % index] = score
         data[settings.tioj_instance.subtasks_data_destroy % index] = 'false'

@@ -51,6 +51,38 @@ def write_json(path, data):
     with open(path, 'w') as json_file:
         json.dump(data, json_file)
 
+'''
+Requirement: None.
+
+Description: Format a list of testdata ids the way TIOJ writes a td_list, where a run of
+             consecutive ids is collapsed into 'first-last'. ['1', '2', '3', '4', '6'] becomes
+             '1-4,6'. The ids are sorted and deduplicated, since a range only makes sense on
+             sorted input. A list holding anything that is not a plain number is joined as it
+             is, rather than guessing at its meaning.
+
+Return value: The comma separated string.
+'''
+def compress_id_list(ids):
+    ids = list(ids)
+    if not ids:
+        return ''
+    if not all(str(i).strip().isdigit() for i in ids):
+        return ','.join(str(i) for i in ids)
+
+    numbers = sorted(set(int(i) for i in ids))
+
+    groups = []
+    first = last = numbers[0]
+    for number in numbers[1:]:
+        if number == last + 1:
+            last = number
+        else:
+            groups.append((first, last))
+            first = last = number
+    groups.append((first, last))
+
+    return ','.join(str(first) if first == last else f'{first}-{last}' for first, last in groups)
+
 def replace_header(content, settings):
     for header in settings.default.replace_headers:
         path = expand_settings_variable(settings.default.replace_header_paths)
