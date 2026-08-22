@@ -22,6 +22,16 @@ def verify_subtasks(problem, settings):
     except jsonschema.exceptions.ValidationError as err:
         helper.throw_error(str(err))
 
+    for prop in schema['properties']:
+        if (prop not in problem.subtasks) and ('default' in schema['properties'][prop]):
+            problem.subtasks[prop] = schema['properties'][prop]['default']
+
+    subtask_properties = schema['properties']['subtasks']['patternProperties']['.*']['properties']
+    for sub in problem.subtasks['subtasks']:
+        for prop in subtask_properties:
+            if (prop not in problem.subtasks['subtasks'][sub]) and ('default' in subtask_properties[prop]):
+                problem.subtasks['subtasks'][sub][prop] = subtask_properties[prop]['default']
+
     indices = []
     sum_of_score = float(0)
 

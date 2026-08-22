@@ -7,7 +7,17 @@
                 "type": "string",
                 "minLength": 0
             },
-            "minItems": 0
+            "minItems": 0,
+            "default": []
+        },
+        "subtask_sensitive_validators": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "minLength": 0
+            },
+            "minItems": 0,
+            "default": []
         },
         "subtasks": {
             "type": "object",
@@ -25,6 +35,15 @@
                         "text": {
                             "type": "string",
                             "default": ""
+                        },
+                        "validators": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "minLength": 0
+                            },
+                            "minItems": 0,
+                            "default": []
                         }
                     },
                     "required": [
@@ -36,7 +55,6 @@
         }
     },
     "required": [
-        "global_validators",
         "subtasks"
     ]
 }
