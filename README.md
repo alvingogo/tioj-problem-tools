@@ -53,6 +53,20 @@ stays yours and can be filled in again later by `upload-problem`.
 
 tioj-problem-tools provide [toml](https://toml.io/en/) configuration files to read configurations of itself in the directory `configs/`. Whenever users want to customize their formats, users can always, and only need to, modify the content in `configs/` (including the JSON schema) except changing the attributes' names.
 
+### Edit the tags without knowing what is already there
+
+`upload-problem` writes the whole `tag_list` from `problem.json`, which makes it awkward to
+touch one tag on a problem that is tagged on TIOJ but not in its directory. `update-tag` reads
+the current tags back first and edits them in place, so adding one keeps the rest.
+```
+python tioj.py update-tag 1234 dp graph      # add two tags
+python tioj.py update-tag 1234 dp --remove   # drop one
+python tioj.py update-tag 1234 dp --clear    # replace everything with dp
+python tioj.py update-tag 1234 --clear       # no tags at all
+```
+Pass `--solution` to edit the solution tags instead. A single argument may hold several tags
+separated by commas, the way TIOJ itself stores them.
+
 ## Current Development Environment
 
 - Operating System: macOS Monterey 12.6
@@ -73,6 +87,5 @@ tioj-problem-tools provide [toml](https://toml.io/en/) configuration files to re
 - Allow uploading testcases without tps directory format validation.
 - Allow "Banned compilers" when editing TIOJ problem's metadata.
 - A more comfortable usage for replacing the strings.
-- A more comfortable usage of "tag lists".
 - Testing.
 - Interactive CLI.
