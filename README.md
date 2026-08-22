@@ -16,7 +16,15 @@ pip install -r requirement.txt
 
 ## Usage
 
-You must setup your TIOJ url, username and the password in `configs/default_settings.toml` first.
+Tell tioj-problem-tools about your TIOJ instance by adding a profile. It asks for the password
+and stores it in your system keyring, so nothing secret is written to a file.
+```
+python tioj.py profile add local --url http://localhost:4000 --username your_name
+```
+
+`configs/default_settings.toml` is tracked by git, so filling your url and password in there
+means either committing them or carrying a dirty working tree forever. Profiles are kept out of
+the repository instead, which also lets you hold an account on more than one TIOJ.
 
 After then, run the script with python.
 ```
@@ -38,6 +46,20 @@ typer tioj.py
 ### Prettify command line interface
 
 With the help of [Typer](https://typer.tiangolo.com/) and [Rich](https://rich.readthedocs.io/en/stable/introduction.html), tioj-problem-tools has a pretty interface. Make users have a comfortable experience.
+
+### Switch between TIOJ instances
+
+Each profile names a url and a username, and owns its password in the system keyring. Switch the
+one every command uses with `profile use`, or override it for a single run with `--profile`,
+which is accepted both before and after the subcommand.
+```
+python tioj.py profile list
+python tioj.py profile use ck
+python tioj.py --profile local whoami
+python tioj.py whoami --profile local
+```
+
+With no profile at all, the credentials in `configs/default_settings.toml` are used as before.
 
 ### JSON verification via JSON schema
 
