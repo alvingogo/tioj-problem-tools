@@ -22,6 +22,22 @@ submission_file = "submission[code_file]"
 submission_compiler_id = "submission[compiler_id]"
 compiler_list = ['cplusplus14', 'cplusplus17', 'cplusplus11', 'cplusplus98', 'c11', 'c99', 'c90', 'python2', 'python3', 'haskell', 'cplusplus20', 'c17'] # 1-base
 
+[tioj_instance.empty_value]
+# keys should match tioj_instance_settings.toml/tioj_instance.auto_parse
+# the values that "delete-problem" writes back to reset a problem to an empty one
+title = ""
+tag_list = ""
+solution_tag_list = ""
+visible_state = "invisible"
+discussion_visibility = "disabled"
+specjudge_type = "none"
+interlib_type = "none"
+num_processes = 1
+specjudge_compiler_id = 1
+judge_between_stages = 0
+strict_mode = 0
+verdict_ignore_td_list = ""
+
 [tioj_instance.auto_upload]
 # keys should match path_settings.toml/path.auto_upload
 description = "problem[description]"
