@@ -113,6 +113,26 @@ def update_metadata(problem_id: str = typer.Argument(..., help="The TIOJ problem
     problem_handler.update_metadata(problem_id, attribute, content, tioj, settings) 
 
 @app.command()
+def update_tag(problem_id: str = typer.Argument(..., help="The TIOJ problem id."),
+               tags: list[str] = typer.Argument(None, help="The tags to work on. A single argument may hold several of them separated by commas."),
+               remove: bool = typer.Option(False, '--remove', '-r', help="Remove the given tags instead of adding them."),
+               clear: bool = typer.Option(False, '--clear', help="Drop the existing tags first. On its own it empties the list, together with tags it replaces them."),
+               solution: bool = typer.Option(False, '--solution', '-s', help="Work on the solution tags instead of the ones shown to everyone.")):
+    '''
+    Update the tags of a problem. The tags already on TIOJ are kept unless --remove or --clear says otherwise. Need admin permission.
+    '''
+    if remove and clear:
+        helper.throw_error('Cannot use --remove together with --clear. --clear already drops everything.')
+    if not tags and not clear:
+        helper.throw_error('Give the tags to add, or --remove with the tags to drop, or --clear to empty the list.')
+    if remove and not tags:
+        helper.throw_error('--remove needs the tags to drop. Use --clear to drop all of them.')
+
+    tioj = open_session(require_admin=True)
+
+    problem_handler.update_tag(problem_id, tags or [], tioj, settings, remove=remove, clear=clear, solution=solution)
+
+@app.command()
 def submit(problem_id: str = typer.Argument(..., help="The TIOJ problem id."),
            path: str = typer.Argument(..., help="The path to your program source."),
            compiler: Compiler = typer.Option(default="cplusplus17", help="The compiler."),
