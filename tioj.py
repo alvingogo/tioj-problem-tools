@@ -1,17 +1,155 @@
 import typer
 import json
 import os
+import sys
 from dynaconf import Dynaconf
 from pathlib import Path
 
+from rich import print
+
 import src.helper as helper
 from src.session import open_session
+import src.profile as profile_handler
 from src.config import settings
 from src.config import Compiler
 import src.problem_handler as problem_handler
 from src.submit import submit_submission
 
 app = typer.Typer()
+
+@app.callback()
+def main():
+    '''
+    A tool for assisting TIOJ problem setting.
+
+    Pass --profile <alias> anywhere on the command line, before or after the subcommand, to work
+    against a TIOJ instance other than the current profile.
+    '''
+
+'''
+Requirement: None.
+
+Description: Take --profile out of the command line by hand. Declaring it as an option on every
+             command would work too, but then it only reaches the commands that remember to
+             declare it, and a command added later silently has no --profile at all. Pulling it
+             out here means every command gets it, wherever it is written.
+
+Return value: The alias, or None when it was not given, and the remaining arguments.
+'''
+def extract_profile(argv):
+    alias, rest, index = None, [], 0
+    while index < len(argv):
+        arg = argv[index]
+        if arg == '--':
+            rest += argv[index:]
+            break
+        if arg in ('--profile', '-p'):
+            if index + 1 >= len(argv):
+                helper.throw_error(f'{arg} needs a profile alias.')
+            alias = argv[index + 1]
+            index += 2
+            continue
+        if arg.startswith('--profile='):
+            alias = arg.split('=', 1)[1]
+            index += 1
+            continue
+        rest.append(arg)
+        index += 1
+    return alias, rest
+
+
+profile_app = typer.Typer(help='Manage the TIOJ instances and accounts you switch between.')
+app.add_typer(profile_app, name='profile')
+
+@profile_app.command('add')
+def profile_add(alias: str = typer.Argument(..., help='The name you will refer to this instance by.'),
+                url: str = typer.Option(None, '--url', help='The TIOJ url. Asked interactively when omitted.'),
+                username: str = typer.Option(None, '--username', help='The TIOJ username. Asked interactively when omitted.')):
+    '''
+    Add a TIOJ instance and store its password in the system keyring.
+    '''
+    data = profile_handler.load_profiles()
+
+    if alias in data['profiles']:
+        typer.confirm(f'The profile "{alias}" already exists. Overwrite it?', abort=True)
+
+    if url is None:
+        url = typer.prompt('TIOJ url')
+    if username is None:
+        username = typer.prompt('TIOJ username')
+    password = typer.prompt(f'(user: {username}) Password', hide_input=True)
+
+    profile_handler.set_password(alias, password)
+
+    data['profiles'][alias] = {'tioj_url': url, 'tioj_username': username}
+    if data['current'] is None:
+        data['current'] = alias
+    path = profile_handler.save_profiles(data)
+
+    helper.throw_info(f'Saved the profile [bold]{alias}[/bold] into {path}, its password is in the system keyring.')
+    if data['current'] == alias:
+        helper.throw_info(f'The current profile is now [bold]{alias}[/bold].')
+
+@profile_app.command('use')
+def profile_use(alias: str = typer.Argument(..., help='The profile alias to switch to.')):
+    '''
+    Switch the profile that every command uses by default.
+    '''
+    data = profile_handler.load_profiles()
+
+    if alias not in data['profiles']:
+        known = ', '.join(sorted(data['profiles'])) if data['profiles'] else '(none)'
+        helper.throw_error(f'Unknown profile [bold]{alias}[/bold]. Known profiles: {known}.')
+
+    data['current'] = alias
+    profile_handler.save_profiles(data)
+
+    entry = data['profiles'][alias]
+    helper.throw_info(f"The current profile is now [bold]{alias}[/bold]: {entry['tioj_username']} at {entry['tioj_url']}.")
+
+@profile_app.command('list')
+def profile_list():
+    '''
+    List the known profiles.
+    '''
+    data = profile_handler.load_profiles()
+
+    if not data['profiles']:
+        helper.throw_info('No profile yet, add one with "tioj.py profile add <alias>".')
+        return
+
+    helper.throw_info(f'Profiles in {profile_handler.profiles_path()}:')
+    for alias in sorted(data['profiles']):
+        entry = data['profiles'][alias]
+        marker = '*' if alias == data['current'] else ' '
+        stored = profile_handler.has_password(alias)
+        secret = 'password stored' if stored else ('no password' if stored is False else 'keyring unreachable')
+        print(f"  {marker} [bold]{alias}[/bold]: {entry['tioj_username']} at {entry['tioj_url']} ({secret})")
+
+@profile_app.command('remove')
+def profile_remove(alias: str = typer.Argument(..., help='The profile alias to remove.'),
+                   yes: bool = typer.Option(False, '--yes', '-y', help='Skip the confirmation prompt.')):
+    '''
+    Remove a profile and its stored password.
+    '''
+    data = profile_handler.load_profiles()
+
+    if alias not in data['profiles']:
+        known = ', '.join(sorted(data['profiles'])) if data['profiles'] else '(none)'
+        helper.throw_error(f'Unknown profile [bold]{alias}[/bold]. Known profiles: {known}.')
+
+    if not yes:
+        typer.confirm(f'Remove the profile "{alias}" and its stored password?', abort=True)
+
+    del data['profiles'][alias]
+    if data['current'] == alias:
+        data['current'] = next(iter(sorted(data['profiles'])), None)
+    profile_handler.save_profiles(data)
+    profile_handler.delete_password(alias)
+
+    helper.throw_info(f'Removed the profile [bold]{alias}[/bold].')
+    if data['current'] is not None:
+        helper.throw_info(f"The current profile is now [bold]{data['current']}[/bold].")
 
 @app.command()
 def whoami():
@@ -130,4 +268,6 @@ def submit(problem_id: str = typer.Argument(..., help="The TIOJ problem id."),
     submit_submission(problem_id, path, settings.tioj_instance.compiler_list.index(compiler.value) + 1, replace, tioj, settings)
 
 if __name__ == "__main__":
+    alias, sys.argv = extract_profile(sys.argv)
+    profile_handler.set_cli_override(alias)
     app()
