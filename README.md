@@ -35,6 +35,12 @@ typer tioj.py
 
 ## Features
 
+### Upload only the parts you changed
+
+`upload-problem` uploads everything by default. Passing `--update-*` uploads only the parts you
+name, while passing `--no-update-*` uploads everything but those, which is an effective speed up
+when the testcases are unchanged.
+
 ### Prettify command line interface
 
 With the help of [Typer](https://typer.tiangolo.com/) and [Rich](https://rich.readthedocs.io/en/stable/introduction.html), tioj-problem-tools has a pretty interface. Make users have a comfortable experience.
