@@ -1,4 +1,5 @@
 import os
+import re
 import time
 
 from bs4 import BeautifulSoup
@@ -105,6 +106,35 @@ def get_verdict(submission_id, tioj, settings):
 '''
 Requirement: Logged in.
 
+Description: Read the largest time a submission spent on one testcase off its page. This is not
+             the time TIOJ shows next to the verdict, which is the times of every testcase
+             added up, while the one worth comparing against the time limit is the largest of
+             them.
+
+             The times are padded with hidden digits to keep the decimal points of a column in
+             line, so only the text of the cell itself is a number, not the text of what it
+             contains.
+
+Return value: The largest time in milliseconds, or None when the page carries no testcase
+              times, which is how a submission that never ran looks.
+'''
+def get_max_time(submission_id, tioj, settings):
+    page = tioj.get(settings.endpoints.submission % submission_id)
+    soup = BeautifulSoup(page.text, 'html.parser')
+
+    times = []
+    for cell in soup.find_all(id=re.compile(settings.tioj_instance.submission_page.testdata_time_regex)):
+        text = ''.join(cell.find_all(string=True, recursive=False)).strip()
+        try:
+            times.append(float(text))
+        except ValueError:
+            continue
+
+    return max(times) if times else None
+
+'''
+Requirement: Logged in.
+
 Description: Wait for a submission to be judged, reporting the verdict whenever it changes so
              that a long wait still says what it is waiting on. A timeout of zero waits for as
              long as it takes.
@@ -137,7 +167,7 @@ Description: Submit local program to problem "probem_id".
 
 Return value: None.
 '''
-def submit_submission(problem_id, path, compiler, replace, tioj, settings, wait=False, wait_timeout=0):
+def submit_submission(problem_id, path, compiler, replace, tioj, settings, wait=False, wait_timeout=0, max_time=False):
     if not problem_id.isdigit():
         helper.throw_error('problem_id must be digits')
     problem_id = str(int(problem_id))
@@ -172,4 +202,13 @@ def submit_submission(problem_id, path, compiler, replace, tioj, settings, wait=
 
     if wait:
         verdict, score = wait_for_verdict(submission_id, tioj, settings, wait_timeout)
-        helper.throw_info(f'Submission {submission_id}: [bold]{verdict}[/bold]' + (f' ({score})' if score else ''))
+        report = f'Submission {submission_id}: [bold]{verdict}[/bold]' + (f' ({score})' if score else '')
+
+        if max_time:
+            largest = get_max_time(submission_id, tioj, settings)
+            if largest is None:
+                helper.throw_warning(f'Submission {submission_id} has no testcase times to take the largest of.')
+            else:
+                report += f', at most {largest:g} ms on a testcase'
+
+        helper.throw_info(report)

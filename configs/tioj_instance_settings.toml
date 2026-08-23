@@ -90,3 +90,5 @@ score = "total-score"
 # present only while the verdict is not final yet, which is how TIOJ marks a submission it is
 # still judging
 waiting = "waiting-icon"
+# the per testcase times, whose largest is what "submit --max-time" reports
+testdata_time_regex = "^td-time-[0-9]+$" # regex
