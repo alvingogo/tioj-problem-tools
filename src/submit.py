@@ -105,4 +105,11 @@ def submit_submission(problem_id, path, compiler, replace, tioj, settings):
 
     response = tioj.submit_form(settings.endpoints.submit_problem % problem_id, data=data, multipart=True)
 
-    helper.throw_info(f"Completed submit the {path} to TIOJ problem {problem_id}.")
+    # A submission TIOJ refuses is answered with the form again rather than with an error
+    # status, so the status code says nothing. What does say something is where we ended up:
+    # an accepted submission redirects to its own page, whose last path segment is its id.
+    submission_id = response.url.rstrip('/').split('/')[-1]
+    if not submission_id.isdigit():
+        helper.throw_error(f'TIOJ did not accept the submission and answered with {response.url}.')
+
+    helper.throw_info(f"Completed submit the {path} to TIOJ problem {problem_id}: {response.url}")
