@@ -81,3 +81,12 @@ cxx = "c++17"
 c = "c17"
 py = "python3"
 hs = "haskell"
+
+[tioj_instance.submission_page]
+# the ids of the elements "submit --wait" reads off a submission's own page, which are element
+# ids rather than form field names, since nothing is being submitted there
+verdict = "verdict"
+score = "total-score"
+# present only while the verdict is not final yet, which is how TIOJ marks a submission it is
+# still judging
+waiting = "waiting-icon"
