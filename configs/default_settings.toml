@@ -8,3 +8,7 @@ subtasks_schema = "{CONFIGS_DIR}/subtasks.schema"
 solution_code_verdict = "model_solution"
 replace_headers = ["testlib.h"] # replace the string '#include "name.h"' of all the code by the content of header
 replace_header_paths = "{SCRIPT_DIR}/files" # os.path.join(path, header name)
+# how the checker is compiled before it is uploaded, to catch a checker TIOJ cannot build; the
+# source is fed through stdin and {output} is a path in a temporary directory. The default
+# specjudge compiler of TIOJ is c++17.
+checker_compile_command = "g++ -x c++ -std=c++17 -O2 -o {output} -"
