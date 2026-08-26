@@ -4788,6 +4788,16 @@ void setName(const char *format, ...) {
 }
 
 /*
+ * Compatibility shim: upstream testlib removed registerChecker after 0.9.21, but
+ * checkers written against the older API still call it. It was never more than
+ * setName + registerTestlibCmd, so keep it working here.
+ */
+void registerChecker(std::string probName, int argc, char *argv[]) {
+    setName("checker for problem %s", probName.c_str());
+    registerTestlibCmd(argc, argv);
+}
+
+/*
  * Do not use random_shuffle, because it will produce different result
  * for different C++ compilers.
  *
