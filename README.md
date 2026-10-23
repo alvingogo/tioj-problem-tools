@@ -69,8 +69,9 @@ With no profile at all, the credentials in `configs/default_settings.toml` are u
 
 ### Copy a problem between TIOJ instances
 
-`download-problem` reads a problem from TIOJ into a new tps directory, which `upload-problem` can
-then upload anywhere. Only reading is done on the instance it downloads from, though it needs admin
+`download-problem` reads a problem from TIOJ into a tps directory, which `upload-problem` can
+then upload anywhere. When the directory already holds something, it asks before deleting all of it
+(`--yes` skips the question), and the old content is only replaced once the download succeeded. Only reading is done on the instance it downloads from, though it needs admin
 permission there to see the testdata and the checker.
 ```
 python tioj.py --profile ck download-problem 1234 ./downloaded --code apple
