@@ -3,7 +3,6 @@ import json
 import os
 from dynaconf import Dynaconf
 from pathlib import Path
-from typing import Optional
 
 import src.helper as helper
 from src.session import open_session
@@ -92,12 +91,12 @@ def delete_problem(problem_id: str = typer.Argument(..., help="The TIOJ problem 
 @app.command()
 def upload_problem(tps_dir: Path = typer.Argument(..., exists=True, file_okay=False, help='Path to the tps directory.'),
                    problem_id: str = typer.Argument('', help="The corresponding TIOJ problem id. Leave blank if you want to use 'tioj_problem_id' in problem.json; Use 'new' to upload the problem to a new empty problem."),
-                   update_metadata: Optional[bool] = typer.Option(None, help="Update the metadata in problem.json and the statements."),
-                   update_sample: Optional[bool] = typer.Option(None, help="Update the sample testcases."),
-                   update_checker: Optional[bool] = typer.Option(None, help="Update the checker."),
-                   update_grader: Optional[bool] = typer.Option(None, help="Update the header and grader."),
-                   update_testdata: Optional[bool] = typer.Option(None, help="Update the testcases. --no-update-testdata will give an effective speed up when you don't want to update testcases."),
-                   update_subtasks_data: Optional[bool] = typer.Option(None, help="Update the subtasks' data."),
+                   update_metadata: bool | None = typer.Option(None, help="Update the metadata in problem.json and the statements."),
+                   update_sample: bool | None = typer.Option(None, help="Update the sample testcases."),
+                   update_checker: bool | None = typer.Option(None, help="Update the checker."),
+                   update_grader: bool | None = typer.Option(None, help="Update the header and grader."),
+                   update_testdata: bool | None = typer.Option(None, help="Update the testcases. --no-update-testdata will give an effective speed up when you don't want to update testcases."),
+                   update_subtasks_data: bool | None = typer.Option(None, help="Update the subtasks' data."),
                    clear_missing_statements: bool = typer.Option(False, '--clear-missing-statements', help="Clear a statement field on TIOJ when the tps directory has no file for it, instead of leaving whatever TIOJ already holds there.")):
     '''
     Upload a problem directory in tps format to TIOJ. Need admin permission.
