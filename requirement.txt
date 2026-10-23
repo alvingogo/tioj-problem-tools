@@ -8,3 +8,4 @@ lxml >= 4.9.2
 six
 termcolor
 requests_toolbelt
+keyring >= 25.0
