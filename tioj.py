@@ -221,18 +221,25 @@ def upload_problem(tps_dir: Path = typer.Argument(..., exists=True, file_okay=Fa
 
 @app.command()
 def download_problem(problem_id: str = typer.Argument(..., help="The TIOJ problem id to download."),
-                   tps_dir: Path = typer.Argument(..., file_okay=False, help='Where to write the tps directory. It must not exist yet or be empty.'),
+                   tps_dir: Path = typer.Argument(..., file_okay=False, help='Where to write the tps directory. When it already holds something, you are asked whether to delete all of it and download the problem into it again.'),
                    code: str = typer.Option('', help="The problem code written into problem.json, which also names the grader header. Defaults to 'tioj<problem_id>'."),
                    keep_visible_state: bool = typer.Option(False, '--keep-visible-state', help="Keep the visibility the problem has on TIOJ instead of downloading it as invisible."),
-                   keep_tags: bool = typer.Option(False, '--keep-tags', help="Keep the tags and solution tags the problem has on TIOJ instead of leaving them empty.")):
+                   keep_tags: bool = typer.Option(False, '--keep-tags', help="Keep the tags and solution tags the problem has on TIOJ instead of leaving them empty."),
+                   yes: bool = typer.Option(False, '--yes', '-y', help='Delete what tps_dir already holds without asking.')):
     '''
     Download a TIOJ problem into a tps directory, which upload-problem can upload to another TIOJ instance. Need admin permission.
 
     Use --profile to choose the instance to download from. Nothing is written to that instance.
     '''
+    # Asked before logging in, so that answering no costs nothing.
+    if tps_dir.is_dir() and any(tps_dir.iterdir()):
+        helper.throw_warning(f'{tps_dir} already exists and is not empty.')
+        if not yes:
+            typer.confirm('Delete everything in it and download the problem into it again?', abort=True)
+
     tioj = open_session(require_admin=True)
 
-    problem_handler.download_problem(problem_id, tps_dir, code, keep_visible_state, keep_tags, tioj, settings)
+    problem_handler.download_problem(problem_id, tps_dir, code, keep_visible_state, keep_tags, True, tioj, settings)
 
 @app.command()
 def verify_problem(tps_dir: Path = typer.Argument(..., exists=True, file_okay=False, help='Path to the tps directory.')):

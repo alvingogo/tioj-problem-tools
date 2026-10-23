@@ -289,8 +289,15 @@ def samples_lead_testdata(samples, testdata, memberships, directory):
 '''
 Requirement: Admin permission.
 
-Description: Download a TIOJ problem into a new tps directory that upload-problem accepts, so that
+Description: Download a TIOJ problem into a tps directory that upload-problem accepts, so that
              it can be uploaded to another TIOJ instance. Nothing is written to TIOJ.
+
+             The problem is written into a temporary directory next to tps_directory, which takes
+             its place only once everything is downloaded, so a failure halfway leaves neither a
+             partial directory nor, when replace is set, a deleted one. A tps_directory that
+             already holds something is refused unless replace is set, in which case all of it is
+             deleted: leftovers such as testcases under other names would otherwise be uploaded
+             along with the problem.
 
              The upload is undone where it changed things on the way: the statement filters are
              reversed and the headers in files/ become #include lines again. What a tps
@@ -307,17 +314,46 @@ Description: Download a TIOJ problem into a new tps directory that upload-proble
 
 Return value: None.
 '''
-def download_problem(problem_id, tps_directory, code, keep_visible_state, keep_tags, tioj, settings):
+def download_problem(problem_id, tps_directory, code, keep_visible_state, keep_tags, replace, tioj, settings):
     if not problem_id.isdigit():
         helper.throw_error('problem_id must be digits')
     problem_id = str(int(problem_id))
     code = code or f'tioj{problem_id}'
 
-    if os.path.exists(tps_directory) and (not os.path.isdir(tps_directory) or os.listdir(tps_directory)):
+    if os.path.exists(tps_directory) and not os.path.isdir(tps_directory):
+        helper.throw_error(f'{tps_directory} already exists and is not a directory.')
+    occupied = os.path.isdir(tps_directory) and len(os.listdir(tps_directory)) > 0
+    if occupied and not replace:
         helper.throw_error(f'{tps_directory} already exists and is not an empty directory.')
 
     helper.throw_status(f'Downloading TIOJ problem {problem_id} into {tps_directory} (problem code: [bold]{code}[/bold])...')
 
+    parent = os.path.dirname(os.path.abspath(tps_directory))
+    os.makedirs(parent, exist_ok=True)
+    staging = tempfile.mkdtemp(prefix=f'.{os.path.basename(os.path.abspath(tps_directory))}.download-', dir=parent)
+    try:
+        write_problem(problem_id, staging, code, keep_visible_state, keep_tags, tioj, settings)
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+
+    if os.path.isdir(tps_directory):
+        if occupied:
+            helper.throw_status(f'Deleting the old content of {tps_directory}...')
+        shutil.rmtree(tps_directory)
+    os.rename(staging, tps_directory)
+
+    helper.throw_info(f'Completed download TIOJ problem {problem_id} into {tps_directory}.')
+
+'''
+Requirement: Admin permission.
+
+Description: Write a TIOJ problem into tps_directory, which exists and is empty. See
+             download_problem.
+
+Return value: None.
+'''
+def write_problem(problem_id, tps_directory, code, keep_visible_state, keep_tags, tioj, settings):
     page = tioj.get(settings.endpoints.edit_problem % problem_id).content
     try:
         form = dict(html_form_to_dict(page))
@@ -470,5 +506,3 @@ def download_problem(problem_id, tps_directory, code, keep_visible_state, keep_t
             validate(instance=helper.read_json(path(json_path)), schema=helper.read_json(schema_path))
         except jsonschema.exceptions.ValidationError as err:
             helper.throw_error(f'The downloaded {json_path} does not follow {os.path.basename(schema_path)}: {err.message}')
-
-    helper.throw_info(f'Completed download TIOJ problem {problem_id} into {tps_directory}.')
