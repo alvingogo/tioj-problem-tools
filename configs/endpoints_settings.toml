@@ -6,3 +6,4 @@ testdata_list = "problems/%s/testdata" # require: problem_id
 create_testdata = "problems/%s/testdata/new" # require: problem_id
 edit_testdata = "problems/%s/testdata/%s/edit" # require: problem_id, testdata_id
 submit_problem = "problems/%s/submissions/new" # require: problem_id
+submission = "submissions/%s" # require: submission_id

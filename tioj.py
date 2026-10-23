@@ -8,8 +8,8 @@ from typing import Optional
 import src.helper as helper
 from src.session import open_session
 from src.config import settings
-from src.config import Compiler
 import src.problem_handler as problem_handler
+from src.submit import get_compilers
 from src.submit import submit_submission
 
 app = typer.Typer()
@@ -195,12 +195,22 @@ def update_tag(problem_id: str = typer.Argument(..., help="The TIOJ problem id."
 
 @app.command()
 def submit(problem_id: str = typer.Argument(..., help="The TIOJ problem id."),
-           path: str = typer.Argument(..., help="The path to your program source."),
-           compiler: Compiler = typer.Option(default="cplusplus17", help="The compiler."),
+           path: str = typer.Argument(None, help="The path to your program source. Not needed with --list-compilers."),
+           compiler: str = typer.Option(default=None, help="The compiler, named the way TIOJ names it, for example \"c++17\" or \"python3\". Defaults to the one configured for the source file's extension. Use --list-compilers to see what the problem accepts."),
+           list_compilers: bool = typer.Option(False, '--list-compilers', help="Print the compilers the problem accepts and exit, instead of submitting anything."),
+           wait: bool = typer.Option(False, '--wait', help="Wait for the submission to be judged and report its verdict."),
+           max_time: bool = typer.Option(False, '--max-time', help="With --wait, also report the largest time the submission spent on one testcase, which is the one to compare against the time limit."),
+           wait_timeout: int = typer.Option(default=300, help="How many seconds --wait gives up after. Zero waits for as long as it takes."),
            replacement: str = typer.Option(default="", help="Replace keyword(s) to specific string(s). Doesn't support ':', ',', and whitespace in keywords or strings. Format: keyword1:string1,keyword2:string2,...")):
     '''
     Submit local program to TIOJ problem "problem_id". 
     '''
+    if max_time and not wait:
+        helper.throw_error('--max-time needs --wait, since a submission that has not been judged has no times to report.')
+
+    if path is None and not list_compilers:
+        helper.throw_error('Missing the path to your program source.')
+
     tioj = open_session()
     replace = []
     for rep in replacement.split(','):
@@ -208,7 +218,14 @@ def submit(problem_id: str = typer.Argument(..., help="The TIOJ problem id."),
         if len(rep) > 1:
             replace.append((rep[0], rep[1]))
 
-    submit_submission(problem_id, path, settings.tioj_instance.compiler_list.index(compiler.value) + 1, replace, tioj, settings)
+    if list_compilers:
+        compilers = get_compilers(problem_id, tioj, settings)
+        width = max(len(name) for name, _, _ in compilers)
+        for name, description, id in compilers:
+            print(name.ljust(width), description.removeprefix(name + '/'))
+        return
+
+    submit_submission(problem_id, path, compiler, replace, tioj, settings, wait=wait, wait_timeout=wait_timeout, max_time=max_time)
 
 if __name__ == "__main__":
     app()

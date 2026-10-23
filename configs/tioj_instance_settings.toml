@@ -20,7 +20,6 @@ subtasks_data_destroy_regex = "^problem\\[subtasks_attributes\\]\\[.*\\]\\[_dest
 submission_code = "submission[code_content_attributes][code]"
 submission_file = "submission[code_file]"
 submission_compiler_id = "submission[compiler_id]"
-compiler_list = ['cplusplus14', 'cplusplus17', 'cplusplus11', 'cplusplus98', 'c11', 'c99', 'c90', 'python2', 'python3', 'haskell', 'cplusplus20', 'c17'] # 1-base
 
 [tioj_instance.empty_value]
 # keys should match tioj_instance_settings.toml/tioj_instance.auto_parse
@@ -59,3 +58,37 @@ specjudge_compiler_id = "problem[specjudge_compiler_id]"
 judge_between_stages = "problem[judge_between_stages]"
 strict_mode = "problem[strict_mode]"
 verdict_ignore_td_list = "problem[verdict_ignore_td_list]"
+
+[tioj_instance.compiler_alias]
+# other spellings accepted by "submit --compiler", mapped onto the compiler names TIOJ itself
+# uses, which are the part of a compiler's description before the first "/"
+cplusplus98 = "c++98"
+cplusplus11 = "c++11"
+cplusplus14 = "c++14"
+cplusplus17 = "c++17"
+cplusplus20 = "c++20"
+cpp = "c++17"
+py = "python3"
+python = "python3"
+hs = "haskell"
+
+[tioj_instance.compiler_extension]
+# the compiler "submit" picks when --compiler is not given, keyed by the source file's extension
+# without its dot
+cpp = "c++17"
+cc = "c++17"
+cxx = "c++17"
+c = "c17"
+py = "python3"
+hs = "haskell"
+
+[tioj_instance.submission_page]
+# the ids of the elements "submit --wait" reads off a submission's own page, which are element
+# ids rather than form field names, since nothing is being submitted there
+verdict = "verdict"
+score = "total-score"
+# present only while the verdict is not final yet, which is how TIOJ marks a submission it is
+# still judging
+waiting = "waiting-icon"
+# the per testcase times, whose largest is what "submit --max-time" reports
+testdata_time_regex = "^td-time-[0-9]+$" # regex
