@@ -73,6 +73,23 @@ def resolve_update_options(options):
     return {name: True for name in options}
 
 @app.command()
+def delete_problem(problem_id: str = typer.Argument(..., help="The TIOJ problem id."),
+                   yes: bool = typer.Option(False, '--yes', '-y', help="Skip the confirmation prompt.")):
+    '''
+    Remove all the content of a TIOJ problem while keeping the problem id, which resets it to an empty problem. Need admin permission.
+    '''
+    if not problem_id.isdigit():
+        helper.throw_error('problem_id must be digits')
+    problem_id = str(int(problem_id))
+
+    tioj = open_session(require_admin=True)
+
+    if not yes:
+        typer.confirm(f'This will erase everything in TIOJ problem {problem_id}. Continue?', abort=True)
+
+    problem_handler.delete_problem(problem_id, tioj, settings)
+
+@app.command()
 def upload_problem(tps_dir: Path = typer.Argument(..., exists=True, file_okay=False, help='Path to the tps directory.'),
                    problem_id: str = typer.Argument('', help="The corresponding TIOJ problem id. Leave blank if you want to use 'tioj_problem_id' in problem.json; Use 'new' to upload the problem to a new empty problem."),
                    update_metadata: Optional[bool] = typer.Option(None, help="Update the metadata in problem.json and the statements."),
