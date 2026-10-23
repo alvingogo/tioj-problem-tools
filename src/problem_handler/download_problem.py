@@ -268,14 +268,21 @@ def write_public_samples(samples, tps_directory, settings):
         write_text(name + settings.path.input_suffix, sample_input)
         write_text(name + settings.path.output_suffix, sample_output)
 
+# A sample typed into the edit page comes back with the CRLF a browser submits a textarea with,
+# and with or without a newline at the end, while the testcase holding the same data is an
+# uploaded file with neither, so the two are compared the way a judge compares output.
+def same_text(data, text):
+    normalize = lambda content: content.replace(b'\r\n', b'\n').rstrip(b'\n')
+    return normalize(data) == normalize(text.encode())
+
 def samples_lead_testdata(samples, testdata, memberships, directory):
     if not samples or len(samples) > min(len(testdata), MAX_TESTSET_SIZE):
         return False
     for position, (sample_input, sample_output) in enumerate(samples):
         if memberships[position] != memberships[0]:
             return False
-        if (read_bytes(join(directory, f'{position}.in')) != sample_input.encode()
-                or read_bytes(join(directory, f'{position}.out')) != sample_output.encode()):
+        if (not same_text(read_bytes(join(directory, f'{position}.in')), sample_input)
+                or not same_text(read_bytes(join(directory, f'{position}.out')), sample_output)):
             return False
     return True
 
@@ -295,11 +302,12 @@ Description: Download a TIOJ problem into a new tps directory that upload-proble
              solution, which verify-problem requires.
 
              The problem is downloaded as invisible unless keep_visible_state is set, so that
-             uploading it never publishes it by accident.
+             uploading it never publishes it by accident, and without tags unless keep_tags is
+             set.
 
 Return value: None.
 '''
-def download_problem(problem_id, tps_directory, code, keep_visible_state, tioj, settings):
+def download_problem(problem_id, tps_directory, code, keep_visible_state, keep_tags, tioj, settings):
     if not problem_id.isdigit():
         helper.throw_error('problem_id must be digits')
     problem_id = str(int(problem_id))
@@ -345,6 +353,13 @@ def download_problem(problem_id, tps_directory, code, keep_visible_state, tioj, 
     if not keep_visible_state and metadata.get('visible_state', 'invisible') != 'invisible':
         helper.throw_status(f"The problem is {metadata['visible_state']} on TIOJ, it is downloaded as invisible. Pass --keep-visible-state to keep it.")
         metadata['visible_state'] = 'invisible'
+    # The tags belong to the instance they were given on, where another instance may well use a
+    # different set, and solution tags give the solution away, so neither is carried over.
+    if not keep_tags:
+        for prop in ('tag_list', 'solution_tag_list'):
+            if metadata.get(prop):
+                helper.throw_status(f'The problem has {prop} "{escape(metadata[prop])}" on TIOJ, it is downloaded empty. Pass --keep-tags to keep it.')
+                metadata[prop] = ''
     metadata['has_checker'] = metadata.get('specjudge_type', 'none') != 'none'
     metadata['has_grader'] = metadata.get('interlib_type', 'none') != 'none'
     if metadata['has_checker']:
