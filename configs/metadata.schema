@@ -2,7 +2,12 @@
     "type" : "object",
     "properties" : {
         "code": {
-            "type": "string"  
+            "type": "string"
+        },
+        "type": {
+            "type": "string",
+            "enum": ["Batch", "Communication", "OutputOnly", "TwoSteps"],
+            "default": "Batch"
         },
         "time_limit": {
             "type": "number",
