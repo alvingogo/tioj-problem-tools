@@ -1,6 +1,7 @@
 [tioj_instance]
 sample_input = "problem[sample_testdata_attributes][%d][input]" # require: index
 sample_output = "problem[sample_testdata_attributes][%d][output]" # require: index
+sample_display_type = "problem[sample_testdata_attributes][%d][display_type]" # require: index
 sample_destroy = "problem[sample_testdata_attributes][%d][_destroy]" # require: index
 sample_destroy_regex = "^problem\\[sample_testdata_attributes\\]\\[.*\\]\\[_destroy\\]$" # regex
 checker = "problem[sjcode]"
@@ -15,6 +16,7 @@ output_limit = "testdatum[output_limit]"
 subtasks_data_td_list = "problem[subtasks_attributes][%d][td_list]" # require: index
 subtasks_data_constraints = "problem[subtasks_attributes][%d][constraints]" # require: index
 subtasks_data_score = "problem[subtasks_attributes][%d][score]" # require: index
+banned_compilers = "problem[compiler_ids][]"
 subtasks_data_destroy = "problem[subtasks_attributes][%d][_destroy]" # require: index
 subtasks_data_destroy_regex = "^problem\\[subtasks_attributes\\]\\[.*\\]\\[_destroy\\]$" # regex
 submission_code = "submission[code_content_attributes][code]"
@@ -43,3 +45,18 @@ specjudge_compiler_id = "problem[specjudge_compiler_id]"
 judge_between_stages = "problem[judge_between_stages]"
 strict_mode = "problem[strict_mode]"
 verdict_ignore_td_list = "problem[verdict_ignore_td_list]"
+
+[tioj_instance.unsupported]
+# the edit form fields that a tps directory has no place for, with the value TIOJ gives a new
+# problem; download-problem warns when a problem changed one of them, since it cannot keep that
+"problem[specjudge_compile_args]" = ""
+"problem[_problem_prog_enabled]" = "0"
+"problem[problem_prog_code]" = ""
+"problem[judge_abnormally_terminated]" = "0"
+"problem[default_scoring_args]" = ""
+"problem[code_length_limit]" = "5000000"
+"problem[ranklist_display_score]" = "0"
+"problem[skip_group]" = "0"
+"problem[summary_type]" = "none"
+"problem[summary_code]" = ""
+"problem[score_precision]" = "2"
