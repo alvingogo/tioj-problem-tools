@@ -1,6 +1,7 @@
 import os
 
 from src import helper
+from src.problem_handler.verify_checker import verify_checker
 from src.problem_handler.verify_metadata import verify_metadata
 from src.problem_handler.verify_sample import verify_sample
 from src.problem_handler.verify_solutions import verify_solutions
@@ -18,6 +19,7 @@ class Problem:
         self.tps_directory = tps_directory
         
         verify_metadata(self, settings)
+        verify_checker(self, settings)
         verify_sample(self, settings)
         verify_solutions(self, settings)
         verify_subtasks(self, settings)
