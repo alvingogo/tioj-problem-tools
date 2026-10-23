@@ -5,7 +5,7 @@ import src.helper as helper
 
 # Replace the statement content to fit TIOJ's features.
 def statement_filter(content, problem_id, problem, path):
-    if re.match(".*\.md$", path):
+    if re.match(r".*\.md$", path):
         content = content.replace('^', '^ ')
     content = content.replace(problem.metadata['code'] + '.h', 'lib%04d.h' % int(problem_id))
     return content
