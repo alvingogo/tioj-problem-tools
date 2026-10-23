@@ -332,6 +332,11 @@ def download_problem(problem_id, tps_directory, code, keep_visible_state, keep_t
     parent = os.path.dirname(os.path.abspath(tps_directory))
     os.makedirs(parent, exist_ok=True)
     staging = tempfile.mkdtemp(prefix=f'.{os.path.basename(os.path.abspath(tps_directory))}.download-', dir=parent)
+    # mkdtemp keeps the directory private, which it would stay after the rename below; give it the
+    # permissions an ordinary mkdir would.
+    umask = os.umask(0)
+    os.umask(umask)
+    os.chmod(staging, 0o777 & ~umask)
     try:
         write_problem(problem_id, staging, code, keep_visible_state, keep_tags, tioj, settings)
     except BaseException:
