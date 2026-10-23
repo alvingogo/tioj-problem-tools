@@ -302,8 +302,9 @@ Description: Download a TIOJ problem into a tps directory that upload-problem ac
              The upload is undone where it changed things on the way: the statement filters are
              reversed and the headers in files/ become #include lines again. What a tps
              directory cannot express is reported as a warning rather than silently dropped:
-             the edit form fields this tool does not upload, limits that differ between
-             testcases and samples that are not among the testdata.
+             the edit form fields this tool does not upload and limits that differ between
+             testcases. Samples that are not the first testcases go to path.public_sample with
+             sample_source set to 'public'.
 
              TIOJ keeps no solution, so solutions.json names a placeholder as the model
              solution, which verify-problem requires.
@@ -456,11 +457,14 @@ def write_problem(problem_id, tps_directory, code, keep_visible_state, keep_tags
     elif sample_name is not None and samples_lead_testdata(samples, testdata, memberships, download_directory):
         sample_count = len(samples)
     elif samples:
+        # Samples that are not the first testcases, such as another valid answer of a problem with
+        # a checker, are kept apart from the testdata, where sample_source tells upload-problem to
+        # find them.
         write_public_samples(samples, tps_directory, settings)
+        metadata['sample_source'] = 'public'
         reason = ('are not the first testcases' if sample_name is not None
-                  else f'cannot be named after path.sample "{settings.path.sample}", which is not "<testdata directory>/<name>-*"')
-        helper.throw_warning(f'The {len(samples)} sample(s) {reason}, so tps has no place for them that upload-problem reads. '
-                             f'They are saved in {os.path.dirname(settings.path.public_sample)}/ but uploading this directory leaves the problem without samples.')
+                  else f'cannot be named after path.sample "{settings.path.sample}"')
+        helper.throw_status(f'The {len(samples)} sample(s) {reason}, they are saved in {os.path.dirname(settings.path.public_sample)}/ with "sample_source": "public".')
 
     groups = group_testdata(len(testdata), memberships, sample_count, sample_name)
 
