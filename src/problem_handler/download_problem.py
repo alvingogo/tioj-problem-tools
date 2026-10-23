@@ -7,26 +7,13 @@ import tempfile
 from collections import Counter
 from os.path import join
 
+import jsonschema
 from bs4 import BeautifulSoup
+from html_form_to_dict import html_form_to_dict
+from jsonschema import validate
+from rich.markup import escape
 
 import src.helper as helper
-
-# The fields of the edit form that a tps directory has no place for, with the value TIOJ gives a
-# new problem. A problem that changed one of them is downloaded without that change, so the user is
-# told about it rather than finding out after the upload.
-UNSUPPORTED_FIELDS = {
-    'problem[specjudge_compile_args]': '',
-    'problem[_problem_prog_enabled]': '0',
-    'problem[problem_prog_code]': '',
-    'problem[judge_abnormally_terminated]': '0',
-    'problem[default_scoring_args]': '',
-    'problem[code_length_limit]': '5000000',
-    'problem[ranklist_display_score]': '0',
-    'problem[skip_group]': '0',
-    'problem[summary_type]': 'none',
-    'problem[summary_code]': '',
-    'problem[score_precision]': '2',
-}
 
 # A run of testcases goes into one testset, and tps names a test '<testset>-<offset>' with the
 # offset written in two digits. Past 99 the names stop sorting in their real order, and the upload
@@ -43,6 +30,20 @@ def form_value(form, name):
 def as_number(text):
     number = float(text)
     return int(number) if number.is_integer() else number
+
+# Turn a form value into the type metadata.schema asks for. A value that does not convert is kept
+# as it is, so that the validation at the end names the field instead of a ValueError here.
+def convert_by_schema(value, schema):
+    try:
+        if schema.get('type') == 'integer':
+            return int(value)
+        if schema.get('type') == 'number':
+            return as_number(value)
+    except ValueError:
+        return value
+    if schema.get('type') == 'boolean':
+        return value in ('1', 'true')
+    return value
 
 # Undo the '^' to '^ ' of statement_filter in edit_problem and upload_subtasks_data, so that
 # uploading the downloaded text again gives back what TIOJ holds now instead of piling up another
@@ -172,26 +173,61 @@ def parse_td_list(td_list, count):
         positions |= {p for p in range(first, last + 1) if p < count}
     return positions
 
-def read_subtasks(form):
+def read_subtasks(form, settings):
     subtasks = []
     index = 0
-    while f'problem[subtasks_attributes][{index}][td_list]' in form:
+    while settings.tioj_instance.subtasks_data_td_list % index in form:
         subtasks.append({
-            'td_list': form_value(form, f'problem[subtasks_attributes][{index}][td_list]'),
-            'constraints': form_value(form, f'problem[subtasks_attributes][{index}][constraints]'),
-            'score': form_value(form, f'problem[subtasks_attributes][{index}][score]'),
+            'td_list': form_value(form, settings.tioj_instance.subtasks_data_td_list % index),
+            'constraints': form_value(form, settings.tioj_instance.subtasks_data_constraints % index),
+            'score': form_value(form, settings.tioj_instance.subtasks_data_score % index),
         })
         index += 1
     return subtasks
 
-def read_samples(form):
+def read_samples(form, settings):
     samples = []
     index = 0
-    while f'problem[sample_testdata_attributes][{index}][input]' in form:
-        samples.append((form_value(form, f'problem[sample_testdata_attributes][{index}][input]'),
-                        form_value(form, f'problem[sample_testdata_attributes][{index}][output]')))
+    while settings.tioj_instance.sample_input % index in form:
+        samples.append((form_value(form, settings.tioj_instance.sample_input % index),
+                        form_value(form, settings.tioj_instance.sample_output % index)))
         index += 1
     return samples
+
+# TIOJ shows a sample as plain text unless told otherwise, which tps has no way to say.
+def warn_sample_display_types(form, count, settings):
+    for index in range(count):
+        display_type = form_value(form, settings.tioj_instance.sample_display_type % index)
+        if display_type not in ('', 'plaintext'):
+            helper.throw_warning(f'Sample {index} is shown as {display_type} on TIOJ but a tps directory has no place for it, it will not be downloaded.')
+
+# The banned compilers are checkboxes holding compiler ids, which can mean different compilers on
+# another instance, so they are reported by the names on their buttons instead of being kept.
+def warn_banned_compilers(page, settings):
+    soup = BeautifulSoup(page, 'html.parser')
+    names = []
+    for checkbox in soup.find_all('input', attrs={'name': settings.tioj_instance.banned_compilers}):
+        if checkbox.has_attr('checked'):
+            button = checkbox.find_previous_sibling('button')
+            names.append(button.get_text(strip=True) if button else f"id {checkbox.get('value')}")
+    if names:
+        helper.throw_warning(f'The problem bans the compilers {", ".join(names)} on TIOJ but a tps directory has no place for it, they will not be banned after the upload.')
+
+'''
+Requirement: None.
+
+Description: The testset name that makes tps name a test the way settings.path.sample matches,
+             which for 'tests/0-*' is '0'.
+
+Return value: The name, or None when path.sample is not '<testdata directory>/<name>-*'.
+'''
+def sample_testset_name(settings):
+    testdata_directory = os.path.dirname(settings.path.testdata)
+    sample_directory, sample_pattern = os.path.split(settings.path.sample)
+    match = re.fullmatch(r'([^*?\[\]]+)-\*', sample_pattern)
+    if sample_directory != testdata_directory or match is None:
+        return None
+    return match.group(1)
 
 '''
 Requirement: None.
@@ -200,28 +236,30 @@ Description: Arrange the testcases into testsets for gen/data. tps only puts a t
              through the testsets the subtask includes, so consecutive testcases that belong to
              exactly the same subtasks share a testset, and every subtask includes the testsets
              of its testcases. When the first testcases are the samples, they form the testset
-             '0', whose tests tps names '0-*', which is where upload-problem takes the samples
-             from.
+             sample_name, whose tests match settings.path.sample, which is where upload-problem
+             takes the samples from.
 
 Return value: A list of (testset name, list of positions), in position order.
 '''
-def group_testdata(count, memberships, sample_count):
+def group_testdata(count, memberships, sample_count, sample_name):
     groups = []
     for position in range(count):
-        key = '0' if position < sample_count else memberships[position]
-        if groups and groups[-1][0] == key and (key == '0' or len(groups[-1][1]) < MAX_TESTSET_SIZE):
+        key = sample_name if position < sample_count else memberships[position]
+        if groups and groups[-1][0] == key and (key == sample_name or len(groups[-1][1]) < MAX_TESTSET_SIZE):
             groups[-1][1].append(position)
         else:
             groups.append([key, [position]])
 
-    width = len(str(sum(1 for key, _ in groups if key != '0')))
+    # The other testsets are 't<serial>', or 'u<serial>' should the sample testset take that form.
+    prefix = 'u' if sample_name is not None and re.fullmatch(r't\d+', sample_name) else 't'
+    width = len(str(sum(1 for key, _ in groups if key != sample_name)))
     named, serial = [], 0
     for key, positions in groups:
-        if key == '0':
-            named.append(('0', positions))
+        if key == sample_name:
+            named.append((sample_name, positions))
         else:
             serial += 1
-            named.append((f't{serial:0{width}d}', positions))
+            named.append((f'{prefix}{serial:0{width}d}', positions))
     return named
 
 def write_public_samples(samples, tps_directory, settings):
@@ -272,20 +310,36 @@ def download_problem(problem_id, tps_directory, code, keep_visible_state, tioj, 
 
     helper.throw_status(f'Downloading TIOJ problem {problem_id} into {tps_directory} (problem code: [bold]{code}[/bold])...')
 
-    form, _ = tioj.get_form(settings.endpoints.edit_problem % problem_id)
+    page = tioj.get(settings.endpoints.edit_problem % problem_id).content
+    try:
+        form = dict(html_form_to_dict(page))
+    except IndexError:
+        helper.throw_error(f'Cannot find a form at endpoint {settings.endpoints.edit_problem % problem_id}')
     path = lambda p: join(tps_directory, p)
 
-    for field, default in UNSUPPORTED_FIELDS.items():
+    for field, default in settings.tioj_instance.unsupported.items():
         if form_value(form, field) not in (default, ''):
-            helper.throw_warning(f'{field} is set on TIOJ but a tps directory has no place for it, it will not be downloaded.')
+            helper.throw_warning(f'{escape(field)} is set on TIOJ but a tps directory has no place for it, it will not be downloaded.')
+    warn_banned_compilers(page, settings)
 
     # metadata
-    metadata = {'name': code, 'code': code, 'type': 'Batch'}
-    integer_fields = {'num_processes', 'specjudge_compiler_id', 'judge_between_stages', 'strict_mode'}
+    metadata_schema = helper.read_json(settings.default.metadata_schema)
+    metadata = {'name': code, 'code': code}
     for prop, field in settings.tioj_instance.auto_parse.items():
         if field in form:
-            value = form_value(form, field)
-            metadata[prop] = int(value) if prop in integer_fields and value.lstrip('-').isdigit() else value
+            metadata[prop] = convert_by_schema(form_value(form, field), metadata_schema['properties'].get(prop, {}))
+
+    # TIOJ has no problem type. upload-problem sends num_processes as the number of stages, so
+    # more than one stage is what a Communication task leaves behind. A TwoSteps task looks the
+    # same on TIOJ, and an OutputOnly one looks like a Batch task with a checker, neither of which
+    # can be told apart from here.
+    if isinstance(metadata.get('num_processes'), int) and metadata['num_processes'] > 1:
+        metadata['type'] = 'Communication'
+        helper.throw_warning(f"The problem runs in {metadata['num_processes']} stages on TIOJ, it is downloaded as a Communication task with num_processes {metadata['num_processes']}. "
+                             'Change "type" in problem.json if it was a TwoSteps task.')
+    else:
+        metadata['type'] = 'Batch'
+        metadata.pop('num_processes', None)
     # A public problem would otherwise go public on the instance it is uploaded to the moment the
     # upload finishes, before anyone had a chance to look at it there.
     if not keep_visible_state and metadata.get('visible_state', 'invisible') != 'invisible':
@@ -326,7 +380,7 @@ def download_problem(problem_id, tps_directory, code, keep_visible_state, tioj, 
     rss_limit = common_limit(testdata, 'rss_limit', 'memory limit (RSS)')
     output_limit = common_limit(testdata, 'output_limit', 'output limit')
     if time_limit is not None:
-        metadata['time_limit'] = as_number(time_limit / 1000)
+        metadata['time_limit'] = time_limit / 1000
     if vss_limit is not None:
         metadata['memory_limit'] = as_number(vss_limit / 1024)
     elif testdata:
@@ -337,23 +391,27 @@ def download_problem(problem_id, tps_directory, code, keep_visible_state, tioj, 
         metadata['output_limit'] = as_number(output_limit / 1024)
 
     # subtasks
-    subtasks = read_subtasks(form)
+    subtasks = read_subtasks(form, settings)
     memberships = [frozenset(i for i, sub in enumerate(subtasks) if td['position'] in parse_td_list(sub['td_list'], len(testdata)))
                    for td in testdata]
 
     # samples
-    samples = read_samples(form)
+    samples = read_samples(form, settings)
+    warn_sample_display_types(form, len(samples), settings)
+    sample_name = sample_testset_name(settings)
     sample_count = 0
     if metadata['has_grader']:
         write_public_samples(samples, tps_directory, settings)
-    elif samples_lead_testdata(samples, testdata, memberships, download_directory):
+    elif sample_name is not None and samples_lead_testdata(samples, testdata, memberships, download_directory):
         sample_count = len(samples)
     elif samples:
         write_public_samples(samples, tps_directory, settings)
-        helper.throw_warning(f'The {len(samples)} sample(s) are not the first testcases, so tps has no place for them that upload-problem reads. '
+        reason = ('are not the first testcases' if sample_name is not None
+                  else f'cannot be named after path.sample "{settings.path.sample}", which is not "<testdata directory>/<name>-*"')
+        helper.throw_warning(f'The {len(samples)} sample(s) {reason}, so tps has no place for them that upload-problem reads. '
                              f'They are saved in {os.path.dirname(settings.path.public_sample)}/ but uploading this directory leaves the problem without samples.')
 
-    groups = group_testdata(len(testdata), memberships, sample_count)
+    groups = group_testdata(len(testdata), memberships, sample_count, sample_name)
 
     os.makedirs(path(os.path.dirname(settings.path.testdata)))
     gen_data = [f'# Downloaded from TIOJ problem {problem_id} at {tioj.tioj_url}.',
@@ -387,5 +445,15 @@ def download_problem(problem_id, tps_directory, code, keep_visible_state, tioj, 
         'placeholder': {'verdict': settings.default.solution_code_verdict,
                         'note': 'TIOJ keeps no solution, this entry only makes the directory pass verify-problem.'}
     })
+
+    # Checked here rather than left to verify-problem, so that a field TIOJ fills differently from
+    # what the schemas expect is reported by the command that wrote it.
+    for json_path, schema_path in ((settings.path.metadata, settings.default.metadata_schema),
+                                   (settings.path.subtasks, settings.default.subtasks_schema),
+                                   (settings.path.solutions, settings.default.solutions_schema)):
+        try:
+            validate(instance=helper.read_json(path(json_path)), schema=helper.read_json(schema_path))
+        except jsonschema.exceptions.ValidationError as err:
+            helper.throw_error(f'The downloaded {json_path} does not follow {os.path.basename(schema_path)}: {err.message}')
 
     helper.throw_info(f'Completed download TIOJ problem {problem_id} into {tps_directory}.')
