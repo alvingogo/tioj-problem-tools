@@ -83,8 +83,8 @@ TIOJ has no problem type either. A problem with more than one stage is downloade
 `Communication` task and anything else as `Batch`, since a `TwoSteps` task looks like the former
 and an `OutputOnly` one like the latter on TIOJ; change `type` in `problem.json` if needed.
 
-The problem is downloaded as invisible, so that uploading it never publishes it by accident. Pass
-`--keep-visible-state` to keep the visibility it has on TIOJ.
+The problem is downloaded as invisible, so that uploading it never publishes it by accident, and
+without its tags and solution tags. Pass `--keep-visible-state` and `--keep-tags` to keep them.
 
 ### JSON verification via JSON schema
 

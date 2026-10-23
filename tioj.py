@@ -223,7 +223,8 @@ def upload_problem(tps_dir: Path = typer.Argument(..., exists=True, file_okay=Fa
 def download_problem(problem_id: str = typer.Argument(..., help="The TIOJ problem id to download."),
                    tps_dir: Path = typer.Argument(..., file_okay=False, help='Where to write the tps directory. It must not exist yet or be empty.'),
                    code: str = typer.Option('', help="The problem code written into problem.json, which also names the grader header. Defaults to 'tioj<problem_id>'."),
-                   keep_visible_state: bool = typer.Option(False, '--keep-visible-state', help="Keep the visibility the problem has on TIOJ instead of downloading it as invisible.")):
+                   keep_visible_state: bool = typer.Option(False, '--keep-visible-state', help="Keep the visibility the problem has on TIOJ instead of downloading it as invisible."),
+                   keep_tags: bool = typer.Option(False, '--keep-tags', help="Keep the tags and solution tags the problem has on TIOJ instead of leaving them empty.")):
     '''
     Download a TIOJ problem into a tps directory, which upload-problem can upload to another TIOJ instance. Need admin permission.
 
@@ -231,7 +232,7 @@ def download_problem(problem_id: str = typer.Argument(..., help="The TIOJ proble
     '''
     tioj = open_session(require_admin=True)
 
-    problem_handler.download_problem(problem_id, tps_dir, code, keep_visible_state, tioj, settings)
+    problem_handler.download_problem(problem_id, tps_dir, code, keep_visible_state, keep_tags, tioj, settings)
 
 @app.command()
 def verify_problem(tps_dir: Path = typer.Argument(..., exists=True, file_okay=False, help='Path to the tps directory.')):
