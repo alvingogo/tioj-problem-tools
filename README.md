@@ -61,6 +61,26 @@ python tioj.py whoami --profile local
 
 With no profile at all, the credentials in `configs/default_settings.toml` are used as before.
 
+### Copy a problem between TIOJ instances
+
+`download-problem` reads a problem from TIOJ into a new tps directory, which `upload-problem` can
+then upload anywhere. Only reading is done on the instance it downloads from, though it needs admin
+permission there to see the testdata and the checker.
+```
+python tioj.py --profile ck download-problem 1234 ./downloaded --code apple
+python tioj.py --profile local upload-problem ./downloaded new
+```
+
+TIOJ has no solutions and generators, so `solutions.json` names a placeholder and `gen/data` only
+records which testcase each test came from. What tps cannot hold is reported rather than dropped
+silently: differing limits between testcases (the largest is kept), samples that are not the first
+testcases of a problem without a grader (saved in `public/examples/` but not uploaded) and the
+edit form fields this tool does not upload. Compiler ids are copied as they are, check them when
+the instances differ.
+
+The problem is downloaded as invisible, so that uploading it never publishes it by accident. Pass
+`--keep-visible-state` to keep the visibility it has on TIOJ.
+
 ### JSON verification via JSON schema
 
 tioj-problem-tools use the [python implementation](https://python-jsonschema.readthedocs.io/en/stable/) of [JSON schema](https://json-schema.org/understanding-json-schema/index.html) to set up proper verificatifor the json files in tps directories. Users can also modify the schema to fit their requirements.

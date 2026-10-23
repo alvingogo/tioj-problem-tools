@@ -58,6 +58,18 @@ class TIOJ_Session:
             helper.throw_error(f"POST {endpoint}: Status Error with http status code {response.status_code}")
         return response
 
+    # save the response of a get request to path, streamed since a testcase can be too large to hold in memory
+    def download(self, endpoint, path):
+        try:
+            with self.tioj_session.get(self.get_url(endpoint), stream=True) as response:
+                if response.status_code >= 400:
+                    helper.throw_error(f"GET {endpoint}: Status Error with http status code {response.status_code}")
+                with open(path, 'wb') as file:
+                    for chunk in response.iter_content(chunk_size=1 << 20):
+                        file.write(chunk)
+        except requests.RequestException as e:
+            helper.throw_error(str(e))
+
     # parse the index-th form with name and id in the endpoint
     def get_form(self, endpoint, index=0, name=None, id=None):
         response = self.get(endpoint)
