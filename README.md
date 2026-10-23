@@ -74,11 +74,11 @@ python tioj.py --profile local upload-problem ./downloaded new
 
 TIOJ has no solutions and generators, so `solutions.json` names a placeholder and `gen/data` only
 records which testcase each test came from. What tps cannot hold is reported rather than dropped
-silently: differing limits between testcases (the largest is kept), samples that are not the first
-testcases of a problem without a grader (saved in `public/examples/` but not uploaded), how the
-samples are displayed, banned compilers and the other edit form fields this tool does not upload,
+silently: differing limits between testcases (the largest is kept), how the samples are displayed, banned compilers and the other edit form fields this tool does not upload,
 which are listed in `tioj_instance.unsupported` of `configs/tioj_instance_settings.toml`. Compiler
-ids are copied as they are, check them when the instances differ.
+ids are copied as they are, check them when the instances differ. Samples that are not the first
+testcases, such as another valid answer of a problem with a checker, are saved in
+`public/examples/` with `"sample_source": "public"`, so they are shown again after the upload.
 
 TIOJ has no problem type either. A problem with more than one stage is downloaded as a
 `Communication` task and anything else as `Batch`, since a `TwoSteps` task looks like the former
