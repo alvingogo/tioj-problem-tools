@@ -103,6 +103,17 @@ Deleting a problem on TIOJ frees its number for reuse by an unrelated problem. `
 instead strips a problem back to the state of a freshly created empty one, so a retired number
 stays yours and can be filled in again later by `upload-problem`.
 
+### Samples that are not testcases
+
+The samples shown on TIOJ come from the testcases matching `tests/0-*`, or from
+`public/examples/` for a problem with a grader. Set `sample_source` in `problem.json` to choose
+explicitly: `"public"` shows `public/examples/` while `tests/0-*` stays ordinary testdata, which
+suits samples that differ from the testdata, such as another valid answer of a problem with a
+checker; `"tests"` uses `tests/0-*` even with a grader.
+```json
+{ "code": "apple", "sample_source": "public" }
+```
+
 ### Neat config files
 
 tioj-problem-tools provide [toml](https://toml.io/en/) configuration files to read configurations of itself in the directory `configs/`. Whenever users want to customize their formats, users can always, and only need to, modify the content in `configs/` (including the JSON schema) except changing the attributes' names.
