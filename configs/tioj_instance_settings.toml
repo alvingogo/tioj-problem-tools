@@ -83,8 +83,9 @@ py = "python3"
 hs = "haskell"
 
 [tioj_instance.submission_page]
-# the ids of the elements "submit --wait" reads off a submission's own page, which are element
-# ids rather than form field names, since nothing is being submitted there
+# how the commands that read a submission's own page find what they need there, where nothing is
+# being submitted and so there are no form field names to go by
+# the ids of the elements "submit --wait" reports
 verdict = "verdict"
 score = "total-score"
 # present only while the verdict is not final yet, which is how TIOJ marks a submission it is
@@ -92,3 +93,8 @@ score = "total-score"
 waiting = "waiting-icon"
 # the per testcase times, whose largest is what "submit --max-time" reports
 testdata_time_regex = "^td-time-[0-9]+$" # regex
+# the label whose neighbouring link names the account a submission came from, which is what
+# "delete-submission" checks before deleting anything
+submitter_label = "Submitter"
+# the path of a user's own page, whose only group is the username that "whoami" also reports
+user_path_regex = "^/users/([^/]+)$" # regex

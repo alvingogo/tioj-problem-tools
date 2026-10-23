@@ -228,6 +228,27 @@ def delete_problem(problem_id: str = typer.Argument(..., help="The TIOJ problem 
     problem_handler.delete_problem(problem_id, tioj, settings)
 
 @app.command()
+def delete_submission(submission_id: str = typer.Argument(..., help="The TIOJ submission id."),
+                      check_submitter: bool = typer.Option(True, help="Refuse to delete a submission that was made by an account other than the one logged in. --no-check-submitter deletes it anyway."),
+                      yes: bool = typer.Option(False, '--yes', '-y', help="Skip the confirmation prompt.")):
+    '''
+    Delete a submission from TIOJ. Need admin permission.
+    '''
+    if not submission_id.isdigit():
+        helper.throw_error('submission_id must be digits')
+    submission_id = str(int(submission_id))
+
+    tioj = open_session(require_admin=True)
+
+    # Asked for only once the submission has been found and its submitter has been approved of,
+    # so that a submission that is about to be left alone is never asked about.
+    def confirm(submitter):
+        made_by = f' made by {submitter}' if submitter else ''
+        return typer.confirm(f'This will delete TIOJ submission {submission_id}{made_by} for good. Continue?', abort=True)
+
+    problem_handler.delete_submission(submission_id, tioj, settings, check_submitter, None if yes else confirm)
+
+@app.command()
 def upload_problem(tps_dir: Path = typer.Argument(..., exists=True, file_okay=False, help='Path to the tps directory.'),
                    problem_id: str = typer.Argument('', help="The corresponding TIOJ problem id. Leave blank if you want to use 'tioj_problem_id' in problem.json; Use 'new' to upload the problem to a new empty problem."),
                    update_metadata: Optional[bool] = typer.Option(None, help="Update the metadata in problem.json and the statements."),

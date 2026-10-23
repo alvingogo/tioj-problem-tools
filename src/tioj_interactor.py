@@ -89,6 +89,16 @@ class TIOJ_Session:
             helper.throw_error(f"Form submission {endpoint}: Status Error with http status code {response.status_code}")
         return response
 
+    # send a delete request to the endpoint, the way TIOJ's own pages do: a post carrying the
+    # method as a field, alongside the authenticity token that TIOJ prints on every page
+    def delete(self, endpoint, token_endpoint):
+        response = self.get(token_endpoint)
+        html_soup = BeautifulSoup(response.text, "html.parser")
+        meta = html_soup.find('meta', {'name': 'csrf-token'})
+        if meta is None or not meta.get('content'):
+            helper.throw_error(f'Cannot find an authenticity token at endpoint {token_endpoint}, maybe your TIOJ has an unexpected format?')
+        return self.post(endpoint, data={'_method': 'delete', 'authenticity_token': meta['content']})
+
     # return True if the session is logged in now
     def loggedin(self):
         return len(self.tioj_session.cookies) == 2 #TODO: find a more general approach
