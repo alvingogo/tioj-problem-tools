@@ -32,6 +32,10 @@
             "type": "boolean",
             "default": false
         },
+        "sample_source": {
+            "type": "string",
+            "enum": ["tests", "public"]
+        },
         "title" : {
             "type" : "string",
             "default": ""

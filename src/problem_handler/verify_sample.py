@@ -8,13 +8,24 @@ Requirement: None.
 
 Description: Parse and verify sample testcases of a tps problem and store the file names of them in the problem structure.
 
+             sample_source in problem.json says where the samples are: 'tests' takes the testcases
+             matching path.sample, which makes the samples part of the testdata, and 'public'
+             takes path.public_sample, the examples handed to contestants, which can differ from
+             the testdata, such as another valid answer of a problem with a checker. Without it,
+             a problem with a grader uses 'public', since a grader reads examples in a format
+             of its own, and any other problem uses 'tests'.
+
 Return value: None.
 '''
 def verify_sample(problem, settings):
 
     helper.throw_status(f'Parsing sample testcases...')
     
-    if ('has_grader' in problem.metadata) and problem.metadata['has_grader']:
+    source = problem.metadata.get('sample_source')
+    if source is None:
+        source = 'public' if problem.metadata.get('has_grader') else 'tests'
+
+    if source == 'public':
         sample_inputs = glob.glob(problem.full_path(settings.path.public_sample + settings.path.input_suffix))
         sample_outputs = glob.glob(problem.full_path(settings.path.public_sample + settings.path.output_suffix))
     else:
