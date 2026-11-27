@@ -142,7 +142,7 @@ Description: Wait for a submission to be judged, reporting the verdict whenever 
 Return value: The tuple (verdict, score).
 '''
 def wait_for_verdict(submission_id, tioj, settings, timeout):
-if timeout < 0:
+    if timeout < 0:
         helper.throw_error('--wait-timeout must be non-negative.')
     deadline = time.monotonic() + timeout if timeout > 0 else None
     reported = None
@@ -157,10 +157,14 @@ if timeout < 0:
             helper.throw_status(f'Submission {submission_id}: {verdict}...')
             reported = verdict
 
-        if deadline is not None and time.monotonic() + POLL_INTERVAL > deadline:
-            helper.throw_error(f'Submission {submission_id} is still "{verdict}" after {timeout} seconds, giving up waiting for it.')
+        sleep_time = POLL_INTERVAL
+        if deadline is not None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                helper.throw_error(f'Submission {submission_id} is still "{verdict}" after {timeout} seconds, giving up waiting for it.')
+            sleep_time = min(POLL_INTERVAL, remaining)
 
-        time.sleep(POLL_INTERVAL)
+        time.sleep(sleep_time)
 
 '''
 Requirement: Logged in.
