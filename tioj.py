@@ -119,7 +119,7 @@ def submit(problem_id: str = typer.Argument(..., help="The TIOJ problem id."),
            list_compilers: bool = typer.Option(False, '--list-compilers', help="Print the compilers the problem accepts and exit, instead of submitting anything."),
            wait: bool = typer.Option(False, '--wait', help="Wait for the submission to be judged and report its verdict."),
            max_time: bool = typer.Option(False, '--max-time', help="With --wait, also report the largest time the submission spent on one testcase, which is the one to compare against the time limit."),
-           wait_timeout: int = typer.Option(default=300, help="How many seconds --wait gives up after. Zero waits for as long as it takes."),
+           wait_timeout: int = typer.Option(default=300, min=0, help="How many seconds --wait gives up after. Zero waits for as long as it takes."),
            replacement: str = typer.Option(default="", help="Replace keyword(s) to specific string(s). Doesn't support ':', ',', and whitespace in keywords or strings. Format: keyword1:string1,keyword2:string2,...")):
     '''
     Submit local program to TIOJ problem "problem_id". 
