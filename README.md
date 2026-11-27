@@ -49,15 +49,16 @@ With the help of [Typer](https://typer.tiangolo.com/) and [Rich](https://rich.re
 
 tioj-problem-tools use the [python implementation](https://python-jsonschema.readthedocs.io/en/stable/) of [JSON schema](https://json-schema.org/understanding-json-schema/index.html) to set up proper verificatifor the json files in tps directories. Users can also modify the schema to fit their requirements.
 
-### Samples that are not testcases
+### Choose whether to use public samples
 
-The samples shown on TIOJ come from the testcases matching `tests/0-*`, or from
-`public/examples/` for a problem with a grader. Set `sample_source` in `problem.json` to choose
-explicitly: `"public"` shows `public/examples/` while `tests/0-*` stays ordinary testdata, which
-suits samples that differ from the testdata, such as another valid answer of a problem with a
-checker; `"tests"` uses `tests/0-*` even with a grader.
+Sample paths are configurable in `configs/path_settings.toml`: `sample` defaults to `tests/0-*`
+and `public_sample` defaults to `public/examples/*`. By default, problems with a grader use
+`public_sample`, and other problems use `sample`. To override this per problem, set
+`use_public_sample` in `problem.json` to `true` for `public_sample` or `false` for `sample`.
+This does not change the testdata path.
+
 ```json
-{ "code": "apple", "sample_source": "public" }
+{ "code": "apple", "use_public_sample": true }
 ```
 
 ### Reset a problem without losing its number
