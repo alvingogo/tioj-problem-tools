@@ -142,6 +142,8 @@ Description: Wait for a submission to be judged, reporting the verdict whenever 
 Return value: The tuple (verdict, score).
 '''
 def wait_for_verdict(submission_id, tioj, settings, timeout):
+if timeout < 0:
+        helper.throw_error('--wait-timeout must be non-negative.')
     deadline = time.monotonic() + timeout if timeout > 0 else None
     reported = None
 
